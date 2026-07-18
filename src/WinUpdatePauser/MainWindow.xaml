@@ -1,0 +1,15 @@
+<Window x:Class="WinUpdatePauser.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Windows 更新暂停助手"
+        Width="520"
+        SizeToContent="Height"
+        MinHeight="360"
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackgroundBrush}"
+        FontFamily="Segoe UI, Microsoft YaHei UI"
+        FontSize="14">
+    <!-- 单窗口结构：根据注册表初始化状态，在引导视图 / 主视图之间切换 -->
+    <ContentControl x:Name="RootContent" />
+</Window>

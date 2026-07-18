@@ -1,0 +1,59 @@
+<UserControl x:Class="WinUpdatePauser.Views.GuideView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 引导页：注册表未初始化（三值不全）时显示，引导用户先在系统设置中暂停一次更新 -->
+    <StackPanel Margin="24">
+
+        <!-- 状态提示 -->
+        <TextBlock Style="{StaticResource CaptionText}">
+            <Run Text="注册表状态：" />
+            <Run Text="✕ 未初始化，需要先在 Windows 设置暂停一次" Foreground="{StaticResource ErrorBrush}" />
+        </TextBlock>
+
+        <!-- 标题 -->
+        <TextBlock Style="{StaticResource TitleText}"
+                   Margin="0,8,0,16"
+                   Text="首次使用需要初始化 Windows 更新暂停设置" />
+
+        <!-- 操作步骤卡片 -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource BodyText}" LineHeight="26">
+                    <Run Text="1. 打开 Windows 设置" /><LineBreak />
+                    <Run Text="2. 进入 Windows 更新" /><LineBreak />
+                    <Run Text="3. 点击「暂停更新」" /><LineBreak />
+                    <Run Text="4. 随便选择一个日期" /><LineBreak />
+                    <Run Text="5. 返回本软件点击「重新检测」" />
+                </TextBlock>
+
+                <!-- 说明截图区域（内嵌资源，替换 Assets/guide.png 后重新构建即可更新） -->
+                <Border Margin="0,12,0,0"
+                        BorderBrush="{StaticResource CardBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                    <Image Source="/Assets/guide.png"
+                           Stretch="Uniform"
+                           StretchDirection="DownOnly" />
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- 操作按钮 -->
+        <Grid Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
+                    Style="{StaticResource PrimaryButton}"
+                    Content="打开 Windows 更新设置"
+                    Click="OpenSettings_Click" />
+            <Button Grid.Column="2"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="重新检测"
+                    Click="Recheck_Click" />
+        </Grid>
+
+    </StackPanel>
+</UserControl>

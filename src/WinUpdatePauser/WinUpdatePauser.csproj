@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WPF 桌面程序，目标 .NET Framework 4.8（Win10 1903+ / Win11 系统自带，零运行时依赖） -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>WinUpdatePauser</AssemblyName>
+    <RootNamespace>WinUpdatePauser</RootNamespace>
+    <!-- 管理员权限（requireAdministrator）与高 DPI 设置在 manifest 中声明 -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 程序集信息 -->
+    <Product>Windows 更新暂停助手</Product>
+    <AssemblyTitle>Windows 更新暂停助手</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <Description>快速修改 Windows Update 暂停结束日期的小工具</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 引用程序集 NuGet 包：无需安装 .NET Framework 4.8 Developer Pack 即可构建 net48 -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 引导页截图，编译为内嵌 WPF 资源；替换此文件后重新构建即可更新界面中的截图 -->
+    <Resource Include="Assets\guide.png" />
+  </ItemGroup>
+
+</Project>
