@@ -6,7 +6,7 @@
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>WinUpdatePauser</AssemblyName>
+    <AssemblyName>WUPause</AssemblyName>
     <RootNamespace>WinUpdatePauser</RootNamespace>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <!-- 管理员权限（requireAdministrator）与高 DPI 设置在 manifest 中声明 -->

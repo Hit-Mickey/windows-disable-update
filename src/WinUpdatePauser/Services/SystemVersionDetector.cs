@@ -2,14 +2,9 @@ using System;
 
 namespace WinUpdatePauser.Services
 {
-    /// <summary>
-    /// 根据 Windows 当前版本给出配置方式建议。
-    /// Windows 11 24H2 及之后的系统 Build 从 26100 开始，优先使用新版日历配置。
-    /// </summary>
+    /// <summary>仅提供系统版本信息显示，不参与新版或旧版配置路由。</summary>
     public static class SystemVersionDetector
     {
-        public const int NewCalendarBuild = 26100;
-
         public static Version CurrentVersion
         {
             get { return Environment.OSVersion.Version; }
@@ -18,11 +13,6 @@ namespace WinUpdatePauser.Services
         public static int CurrentBuild
         {
             get { return CurrentVersion.Build; }
-        }
-
-        public static bool RecommendNewCalendar
-        {
-            get { return CurrentBuild >= NewCalendarBuild; }
         }
 
         public static string DisplayVersion
@@ -34,9 +24,5 @@ namespace WinUpdatePauser.Services
             }
         }
 
-        public static string RecommendationText
-        {
-            get { return RecommendNewCalendar ? "推荐使用新版日历配置" : "推荐使用旧版天数配置"; }
-        }
     }
 }

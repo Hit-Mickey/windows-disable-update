@@ -21,6 +21,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Style="{StaticResource TitleText}" Text="备份管理" />
@@ -31,6 +32,7 @@
 
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="8">
             <ListBox x:Name="BackupList"
+                     SelectionMode="Extended"
                      BorderThickness="0"
                      Background="Transparent"
                      SelectionChanged="BackupList_SelectionChanged"
@@ -53,6 +55,22 @@
         <Grid Grid.Row="3" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="SelectionSummaryText"
+                       Style="{StaticResource CaptionText}"
+                       VerticalAlignment="Center"
+                       Text="已选 0 项" />
+            <Button x:Name="SelectAllButton"
+                    Grid.Column="1"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="全选"
+                    Click="SelectAll_Click" />
+        </Grid>
+
+        <Grid Grid.Row="4" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="8" />
@@ -64,25 +82,28 @@
                      Grid.Column="0"
                      Style="{StaticResource InputBox}"
                      ToolTip="选中备份后输入新名称" />
-            <Button Grid.Column="2"
+            <Button x:Name="RestoreButton"
+                    Grid.Column="2"
                     Style="{StaticResource SecondaryButton}"
                     Content="恢复"
                     Click="Restore_Click" />
-            <Button Grid.Column="4"
+            <Button x:Name="RenameButton"
+                    Grid.Column="4"
                     Style="{StaticResource SecondaryButton}"
                     Content="重命名"
                     Click="Rename_Click" />
-            <Button Grid.Column="6"
+            <Button x:Name="DeleteButton"
+                    Grid.Column="6"
                     Style="{StaticResource SecondaryButton}"
                     Content="删除"
                     Click="Delete_Click" />
         </Grid>
 
-        <TextBlock Grid.Row="4"
+        <TextBlock Grid.Row="5"
                    Style="{StaticResource CaptionText}"
                    Margin="0,14,0,4"
                    Text="当前备份路径（默认：程序目录下的 backup）" />
-        <Grid Grid.Row="5">
+        <Grid Grid.Row="6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
@@ -104,7 +125,7 @@
                     Click="ApplyPath_Click" />
         </Grid>
 
-        <Grid Grid.Row="6" Margin="0,12,0,0">
+        <Grid Grid.Row="7" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />

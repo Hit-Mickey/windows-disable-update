@@ -10,7 +10,7 @@
                    Margin="0,4,0,16"
                    Text="修改 Windows 更新的暂停结束日期，无需手动编辑注册表" />
 
-        <!-- 系统检测与配置方式切换：仅显示当前选中的配置面板 -->
+        <!-- 系统信息与配置方式切换：仅显示当前选中的配置面板 -->
         <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -20,11 +20,11 @@
                 <TextBlock x:Name="SystemVersionText"
                            Style="{StaticResource CaptionText}"
                            Text="正在检测系统版本…" />
-                <TextBlock x:Name="RecommendationText"
+                <TextBlock x:Name="ModeHintText"
                            Style="{StaticResource CaptionText}"
                            Margin="0,3,0,0"
                            Foreground="{StaticResource AccentBrush}"
-                           Text="推荐使用新版日历配置" />
+                           Text="默认使用新版日期配置，可按实际界面切换旧版" />
             </StackPanel>
             <Button x:Name="ModeSwitchButton"
                     Grid.Column="1"
@@ -122,7 +122,7 @@
                 <TextBlock x:Name="ValidationText"
                            Style="{StaticResource CaptionText}"
                            Margin="0,8,0,0"
-                           Text="可填范围：明天 ~ 2099-12-31" />
+                           Text="可填范围：明天 ~ 2199-12-31" />
 
                 <!-- 应用按钮 -->
                 <Button x:Name="ApplyButton"

@@ -37,6 +37,13 @@ namespace WinUpdatePauser.Services
             FlightSettingsMaxPauseDays
         };
 
+        private static readonly string[] NewCalendarValueNames =
+        {
+            PauseFeatureUpdatesEndTime,
+            PauseQualityUpdatesEndTime,
+            PauseUpdatesExpiryTime
+        };
+
         private static readonly object BackupDirectoryLock = new object();
         private static string _backupDirectory;
 
@@ -50,12 +57,7 @@ namespace WinUpdatePauser.Services
                     return false;
                 }
 
-                foreach (string name in new[]
-                {
-                    PauseFeatureUpdatesEndTime,
-                    PauseQualityUpdatesEndTime,
-                    PauseUpdatesExpiryTime
-                })
+                foreach (string name in NewCalendarValueNames)
                 {
                     if (!HasValue(key, name))
                     {
@@ -125,12 +127,7 @@ namespace WinUpdatePauser.Services
                         "注册表键不存在，请先在 Windows 设置中暂停一次更新。备份已保存：" + backup.DisplayName);
                 }
 
-                foreach (string name in new[]
-                {
-                    PauseFeatureUpdatesEndTime,
-                    PauseQualityUpdatesEndTime,
-                    PauseUpdatesExpiryTime
-                })
+                foreach (string name in NewCalendarValueNames)
                 {
                     key.SetValue(name, isoUtc, RegistryValueKind.String);
                 }
@@ -305,12 +302,53 @@ namespace WinUpdatePauser.Services
         /// <summary>删除当前备份目录内选定的 JSON 与对应 REG 文件。</summary>
         public static void DeleteBackup(string jsonPath)
         {
-            string safeJsonPath = ValidateBackupPath(jsonPath);
-            string regPath = Path.ChangeExtension(safeJsonPath, ".reg");
-            File.Delete(safeJsonPath);
-            if (File.Exists(regPath))
+            DeleteBackups(new[] { jsonPath });
+        }
+
+        /// <summary>
+        /// 批量删除当前备份目录内的 JSON 及其对应 REG 文件。
+        /// 所有路径会先完成目录、扩展名和存在性校验，再执行删除。
+        /// </summary>
+        public static void DeleteBackups(IEnumerable<string> jsonPaths)
+        {
+            if (jsonPaths == null)
             {
-                File.Delete(regPath);
+                throw new ArgumentNullException(nameof(jsonPaths));
+            }
+
+            var safeJsonPaths = new List<string>();
+            foreach (string jsonPath in jsonPaths)
+            {
+                string safeJsonPath = ValidateBackupPath(jsonPath);
+                bool alreadyAdded = false;
+                foreach (string existingPath in safeJsonPaths)
+                {
+                    if (string.Equals(existingPath, safeJsonPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyAdded)
+                {
+                    safeJsonPaths.Add(safeJsonPath);
+                }
+            }
+
+            if (safeJsonPaths.Count == 0)
+            {
+                throw new ArgumentException("未选择备份文件。", nameof(jsonPaths));
+            }
+
+            foreach (string safeJsonPath in safeJsonPaths)
+            {
+                string regPath = Path.ChangeExtension(safeJsonPath, ".reg");
+                File.Delete(safeJsonPath);
+                if (File.Exists(regPath))
+                {
+                    File.Delete(regPath);
+                }
             }
         }
 

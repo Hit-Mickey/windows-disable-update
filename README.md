@@ -2,7 +2,7 @@
 
 一个轻量的 Windows 小工具：不用手动打开注册表，即可使用新版日历模式或旧版暂停天数模式管理 Windows 更新暂停状态。
 
-- 单文件 `WinUpdatePauser.exe`，Release 产物约 **350 KB**
+- 单文件 `WUPause.exe`，Release 产物约 **390 KB**
 - **零运行时依赖**：基于 .NET Framework 4.8（Windows 10 1903+ / Windows 11 系统自带）
 - 支持 Windows 10 / Windows 11，浅色 Win11 风格界面，高 DPI 清晰显示
 
@@ -16,7 +16,7 @@ Windows 的暂停更新配置保存在以下注册表路径中：
 HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 ```
 
-本工具根据当前`Windows Build`版本推荐配置方式，用户也可以手动切换。新版模式修改暂停结束时间，旧版模式修改允许暂停的天数；两种模式在写入注册表前都会自动备份当前配置。
+程序启动时默认进入新版日期配置；用户可根据 Windows 更新界面，通过手动切换入口选择旧版天数配置。两种模式在写入注册表前都会自动备份当前配置。
 
 ### 新版日历暂停
 
@@ -24,7 +24,7 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 
 | 项目 | 说明 |
 | --- | --- |
-| 推荐系统 | Windows 11 24H2（Build 26100）及更高版本 |
+| 默认行为 | 程序默认进入此模式；未初始化时先显示引导页 |
 | 配置方法 | 手动填写暂停结束的年、月、日、时、分 |
 | 注册表类型 | 3 个 `REG_SZ` 值，内容为 ISO 8601 UTC 时间 |
 | 初始化要求 | 先在 Windows 设置中暂停一次更新 |
@@ -46,7 +46,7 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 
 | 项目 | 说明 |
 | --- | --- |
-| 推荐系统 | Windows 10 或使用旧版更新界面的 Windows 11 |
+| 使用方式 | 由用户通过页面入口手动切换 |
 | 配置方法 | 手动填写暂停天数，范围为 1～36500 天 |
 | 注册表值 | `FlightSettingsMaxPauseDays` |
 | 注册表类型 | `REG_DWORD` |
@@ -62,20 +62,22 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 ## 使用方法
 
+经过测试，`新版日历配置`适配所有版本，因此默认进入`新版日历配置`，如无特殊需求，建议使用`新版日历配置`。
+当然用户也可在初始页面手动选择切换`旧版配置`。
+
 ### 新版日历配置
 
 新版模式需要 Windows 先生成三个日期注册表值。如果此前没有在系统设置中暂停过更新，程序会显示首次使用引导页（一次初始化即可，如果后续恢复更新，则再重新初始化即可）：
 
 1. 打开 Windows 设置
 2. 进入 Windows 更新
-3. 点击「暂停更新」
-4. 随便选择一个日期
-5. 返回本软件点击「重新检测」
+3. 随便选择一个日期（或者选择暂停1周），暂停更新即可
+4. 返回本软件点击「重新检测」
 
 完成初始化后：
 
 1. 在新版日历页面填写暂停结束的年、月、日、时、分。
-2. 确认时间在明天至 2099-12-31 范围内。
+2. 确认时间在明天至 2199-12-31 范围内。
 3. 点击 **[应用暂停日期]**。程序会先备份当前配置，再写入新的暂停结束时间。
 4. 打开或重新打开「设置 → Windows 更新」，查看新的暂停日期。
 
@@ -85,7 +87,7 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 旧版模式不要求先完成新版初始化，适用于 Windows 10 或仍使用旧版更新界面的 Windows 11：
 
-1. 启动 `WinUpdatePauser.exe`，并通过管理员权限提示。
+1. 启动 `WUPause.exe`，并通过管理员权限提示。
 2. 如果当前显示新版页面，点击顶部的 **[切换到旧版天数配置]**。
 3. 在“旧版暂停天数”中填写 1～36500 之间的整数。
 4. 点击 **[应用旧版暂停天数]**。程序会先备份当前配置，再写入 `FlightSettingsMaxPauseDays`。
@@ -95,7 +97,7 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 ### 配置方式切换
 
-程序会根据 Windows Build 推荐配置方式，但不会限制用户选择。主页面顶部只有一个动态切换按钮，可随时在新版日历配置和旧版天数配置之间切换；两套输入内容不会同时显示。
+程序启动时默认进入新版日期配置，但不会限制用户选择。主页面顶部只有一个动态切换按钮，可随时在新版日历配置和旧版天数配置之间切换；两套输入内容不会同时显示。
 
 ### 恢复正常更新
 
@@ -105,7 +107,8 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 - 默认备份目录为程序 EXE 同级的相对目录 `backup`，可在 **[备份管理]** 中选择自定义目录或恢复默认路径。
 - 每次应用新版、应用旧版、恢复正常更新或恢复备份前，都会自动保存相关注册表值。
-- 备份管理支持恢复、重命名和删除；恢复、删除会显示确认提示，重命名直接执行。所有操作都会限制在当前备份目录内。
+- 备份管理支持恢复、重命名和删除；列表支持 Ctrl/Shift 多选、全选或取消全选，删除时一次确认即可批量删除选中的 JSON 及配套 REG 文件。
+- 恢复和重命名仅允许单选，并且所有备份操作都会限制在当前备份目录内。
 
 ## 构建方法
 
@@ -127,8 +130,8 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 dotnet build src\WinUpdatePauser\WinUpdatePauser.csproj -c Release
 ```
 
-产物：`src\WinUpdatePauser\bin\Release\net48\WinUpdatePauser.exe`
-（同目录的 `.exe.config` 可一并分发，也可省略；`.pdb` 仅用于调试。）程序本身是单个 EXE；`build.cmd` 不会自动覆盖项目根目录的旧 EXE。
+产物：`src\WinUpdatePauser\bin\Release\net48\WUPause.exe`
+（同目录的 `.exe.config` 可一并分发，也可省略；`.pdb` 仅用于调试。）程序本身是单个 EXE；`build.cmd` 不会自动同步项目根目录的交付 EXE。
 
 ### 替换引导页截图
 
@@ -148,7 +151,7 @@ src/WinUpdatePauser/
 │   └── BackupWindow.xaml / .cs # 备份列表、恢复、重命名、删除与路径设置
 ├── Services/
 │   ├── PauseRegistryService.cs # 注册表操作与备份模块
-│   ├── SystemVersionDetector.cs # Windows Build 检测与新版/旧版推荐
+│   ├── SystemVersionDetector.cs # 系统版本信息显示
 │   └── AdminHelper.cs          # 管理员权限检测 / runas 提权重启
 ├── Utils/
 │   └── Iso8601Time.cs          # 本地时间 ↔ ISO 8601 UTC 转换模块
@@ -182,7 +185,7 @@ A：本工具利用的是 Windows 现有的暂停机制，微软未来可能调�
 
 ## 新版 / 旧版配置
 
-程序启动后会读取当前 Windows Build：Build 26100（Windows 11 24H2）及更高版本默认推荐「新版日历配置」，其它版本默认推荐「旧版天数配置」。推荐方式只影响初始选择，页面上的切换入口可以随时切换；新版和旧版配置面板不会同时显示。
+程序启动后默认进入「新版日期配置」。新版尚未初始化时会显示引导页；完成初始化后直接进入新版页面。用户可以根据 Windows 更新界面，通过页面上的切换入口手动选择旧版；新版和旧版配置面板不会同时显示。
 
 - **新版日历配置**：沿用现有的年、月、日、时、分手动输入，并将同一 ISO 8601 UTC 时间写入 `PauseFeatureUpdatesEndTime`、`PauseQualityUpdatesEndTime`、`PauseUpdatesExpiryTime` 三个 `REG_SZ` 值。首次使用新版前仍需先在 Windows 设置中手动暂停一次，让系统生成这些值。
 - **旧版天数配置**：手动填写 1～36500 天，写入 `HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\FlightSettingsMaxPauseDays`（`REG_DWORD`），等价于旧版系统使用的 `reg add` 配置方式。未完成新版初始化时，也可以从引导页切换到旧版。
@@ -193,5 +196,13 @@ A：本工具利用的是 Windows 现有的暂停机制，微软未来可能调�
 
 - 默认目录是程序 EXE 同级的相对目录 `backup`；在「备份管理」中可以选择自定义目录或恢复默认路径。
 - 文件名采用「操作前的配置_时间」格式，例如 `应用新版配置前的配置_20260908-120000-123.json`。
-- 「备份管理」支持恢复、重命名和删除。恢复、删除会二次确认，重命名直接执行；服务端会校验目标必须位于当前备份目录内。恢复操作本身也会先生成一份“恢复备份前的配置”。
+- 「备份管理」支持恢复、重命名和删除。列表可使用 Ctrl/Shift 多选或全选，批量删除时只进行一次确认；恢复和重命名仅允许单选。服务端会校验目标必须位于当前备份目录内。恢复操作本身也会先生成一份“恢复备份前的配置”。
 - 「恢复正常更新」会先备份，再删除本工具管理的新版三个值和旧版天数值。若需恢复以前的状态，可在备份管理中选择对应 JSON 备份。
+
+## 感谢
+
+项目：[WinUpdatePauser](https://github.com/Alwayslikehaimeng/WinUpdatePauser)
+
+## 许可证
+
+本项目采用 [GNU General Public License v3.0](LICENSE)（GPL-3.0）发布。

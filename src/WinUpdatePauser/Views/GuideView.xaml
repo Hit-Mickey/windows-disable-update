@@ -33,7 +33,13 @@
                         CornerRadius="4">
                     <Image Source="/Assets/guide.png"
                            Stretch="Uniform"
-                           StretchDirection="DownOnly" />
+                           StretchDirection="DownOnly"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           SnapsToDevicePixels="True"
+                           UseLayoutRounding="True"
+                           Cursor="Hand"
+                           ToolTip="点击查看原图"
+                           MouseLeftButtonUp="GuideImage_MouseLeftButtonUp" />
                 </Border>
             </StackPanel>
         </Border>

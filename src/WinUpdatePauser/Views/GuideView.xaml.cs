@@ -2,6 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using WinUpdatePauser.Services;
 
 namespace WinUpdatePauser.Views
@@ -57,6 +60,54 @@ namespace WinUpdatePauser.Views
         private void UseLegacy_Click(object sender, RoutedEventArgs e)
         {
             _onLegacyRequested();
+        }
+
+        private void GuideImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Image image = sender as Image;
+            if (image == null || image.Source == null)
+            {
+                return;
+            }
+
+            var preview = new Window
+            {
+                Owner = Window.GetWindow(this),
+                Title = "引导图原图",
+                Icon = new BitmapImage(new Uri("pack://application:,,,/Assets/app-icon.ico")),
+                Width = 900,
+                Height = 650,
+                MinWidth = 480,
+                MinHeight = 320,
+                ResizeMode = ResizeMode.CanResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = (Brush)FindResource("WindowBackgroundBrush"),
+                FontFamily = new System.Windows.Media.FontFamily("Segoe UI, Microsoft YaHei UI"),
+                Content = new ScrollViewer
+                {
+                    Padding = new Thickness(16),
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Content = new Border
+                    {
+                        Background = (Brush)FindResource("CardBackgroundBrush"),
+                        BorderBrush = (Brush)FindResource("CardBorderBrush"),
+                        BorderThickness = new Thickness(1),
+                        Child = new Image
+                        {
+                            Source = image.Source,
+                            Stretch = Stretch.None,
+                            SnapsToDevicePixels = true,
+                            UseLayoutRounding = true
+                        }
+                    }
+                }
+            };
+
+            RenderOptions.SetBitmapScalingMode((Image)((Border)((ScrollViewer)preview.Content).Content).Child,
+                BitmapScalingMode.HighQuality);
+            preview.ShowDialog();
+            e.Handled = true;
         }
     }
 }

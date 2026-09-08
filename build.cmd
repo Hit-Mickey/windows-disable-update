@@ -33,6 +33,6 @@ echo Building Release...
 echo.
 echo ============================================================
 echo  Build succeeded.
-echo  Output: %~dp0src\WinUpdatePauser\bin\Release\net48\WinUpdatePauser.exe
+echo  Output: %~dp0src\WinUpdatePauser\bin\Release\net48\WUPause.exe
 echo ============================================================
 exit /b 0

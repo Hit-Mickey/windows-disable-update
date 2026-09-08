@@ -15,18 +15,13 @@ namespace WinUpdatePauser.Views
     public partial class MainView : UserControl
     {
         private readonly DateTime _minDate = DateTime.Today.AddDays(1);
-        private static readonly DateTime MaxDate = new DateTime(2099, 12, 31);
+        private static readonly DateTime MaxDate = new DateTime(2199, 12, 31);
         private readonly Action<bool> _requestModeChange;
         private readonly Action _onStateChanged;
         private bool _useLegacy;
         private string _currentEndTimeDisplay;
         private string _currentLegacyDaysDisplay;
         private bool _ready;
-
-        public MainView()
-            : this(false, null, null)
-        {
-        }
 
         public MainView(bool useLegacy,
             Action<bool> requestModeChange, Action onStateChanged)
@@ -47,7 +42,6 @@ namespace WinUpdatePauser.Views
         private void LoadCurrentState()
         {
             SystemVersionText.Text = SystemVersionDetector.DisplayVersion;
-            RecommendationText.Text = SystemVersionDetector.RecommendationText;
 
             bool newInitialized = PauseRegistryService.IsInitialized();
 
@@ -194,12 +188,12 @@ namespace WinUpdatePauser.Views
             if (input.Value.Date < _minDate || input.Value.Date > MaxDate)
             {
                 ApplyButton.IsEnabled = false;
-                ShowValidation("日期超出可填范围（明天 ~ 2099-12-31），请重新输入", true);
+                ShowValidation("日期超出可填范围（明天 ~ 2199-12-31），请重新输入", true);
                 return;
             }
 
             ApplyButton.IsEnabled = true;
-            ShowValidation("可填范围：明天 ~ 2099-12-31", false);
+            ShowValidation("可填范围：明天 ~ 2199-12-31", false);
         }
 
         private void ValidateLegacy()
@@ -250,8 +244,7 @@ namespace WinUpdatePauser.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("写入注册表失败：\n\n" + ex.Message,
-                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowError("写入注册表失败：", ex);
             }
         }
 
@@ -275,8 +268,7 @@ namespace WinUpdatePauser.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("写入注册表失败：\n\n" + ex.Message,
-                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowError("写入注册表失败：", ex);
             }
         }
 
@@ -306,8 +298,7 @@ namespace WinUpdatePauser.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("恢复正常更新失败：\n\n" + ex.Message,
-                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowError("恢复正常更新失败：", ex);
             }
         }
 
@@ -345,6 +336,12 @@ namespace WinUpdatePauser.Views
             {
                 SetMode(targetLegacy);
             }
+        }
+
+        private static void ShowError(string message, Exception ex)
+        {
+            MessageBox.Show(message + "\n\n" + ex.Message,
+                "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }
