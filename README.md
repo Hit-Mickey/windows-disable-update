@@ -1,8 +1,8 @@
 # Windows 更新暂停助手（WinUpdatePauser）
 
-一个极简的 Windows 小工具：不用打开注册表，选个日期、点一下，即可把 Windows 更新的**暂停结束日期**改到任意未来时间（如 2077 年）。
+一个轻量的 Windows 小工具：不用手动打开注册表，即可使用新版日历模式或旧版暂停天数模式管理 Windows 更新暂停状态。
 
-- 单文件 `WinUpdatePauser.exe`，仅约 **156 KB**
+- 单文件 `WinUpdatePauser.exe`，Release 产物约 **350 KB**
 - **零运行时依赖**：基于 .NET Framework 4.8（Windows 10 1903+ / Windows 11 系统自带）
 - 支持 Windows 10 / Windows 11，浅色 Win11 风格界面，高 DPI 清晰显示
 
@@ -10,32 +10,61 @@
 
 ## 原理
 
-Windows 11 新版「暂停更新」改成了日期选择器，无法再无限延长。但当用户在
-**设置 → Windows 更新 → 暂停更新** 中选择过一次日期后，系统会在注册表生成：
+Windows 的暂停更新配置保存在以下注册表路径中：
 
 ```
 HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 ```
 
-下的三个 REG_SZ 值（ISO 8601 UTC 格式，三值必须保持完全一致）；旧版模式另外使用同一键下的 `FlightSettingsMaxPauseDays` REG_DWORD：
+本工具根据当前`Windows Build`版本推荐配置方式，用户也可以手动切换。新版模式修改暂停结束时间，旧版模式修改允许暂停的天数；两种模式在写入注册表前都会自动备份当前配置。
+
+### 新版日历暂停
+
+新版 Windows 使用具体日期表示暂停更新的结束时间。首次使用时，需要先在 **设置 → Windows 更新** 中手动暂停一次，让系统生成对应的注册表值；本工具不会自行创建这三个日期值。
+
+| 项目 | 说明 |
+| --- | --- |
+| 推荐系统 | Windows 11 24H2（Build 26100）及更高版本 |
+| 配置方法 | 手动填写暂停结束的年、月、日、时、分 |
+| 注册表类型 | 3 个 `REG_SZ` 值，内容为 ISO 8601 UTC 时间 |
+| 初始化要求 | 先在 Windows 设置中暂停一次更新 |
+| 写入规则 | 将本地时间转换为 UTC，并让三个结束时间值保持一致 |
+
+新版模式涉及以下三个值：
 
 | 值名 | 含义 |
-|---|---|
+| --- | --- |
 | `PauseFeatureUpdatesEndTime` | 功能更新暂停结束时间 |
 | `PauseQualityUpdatesEndTime` | 质量更新暂停结束时间 |
-| `PauseUpdatesExpiryTime` | 暂停总到期时间 |
+| `PauseUpdatesExpiryTime` | 暂停更新的总到期时间 |
 
-格式示例：`2077-01-01T00:00:00Z`
+例如，写入注册表的时间格式为 `2077-01-01T00:00:00Z`。界面显示和输入使用本地时间，程序会在写入时自动转换为 UTC。
 
-本工具做的事就是：把新版三个值统一改成你选择的时间，或按旧版模式写入暂停天数。修改后 Windows 设置中的暂停状态会按新配置显示。
+### 旧版天数暂停
 
-> 注意：新版不会凭空创建三个日期 REG_SZ 值，必须先由 Windows 设置完成一次初始化；旧版按 `reg add` 方式写入 `FlightSettingsMaxPauseDays`，设置键不存在时会按需创建。
+旧版 Windows 更新界面通过 `FlightSettingsMaxPauseDays` 控制可选择的最大暂停天数。本工具将用户填写的天数写入该值，作用与手动执行 `reg add` 命令相同。
+
+| 项目 | 说明 |
+| --- | --- |
+| 推荐系统 | Windows 10 或使用旧版更新界面的 Windows 11 |
+| 配置方法 | 手动填写暂停天数，范围为 1～36500 天 |
+| 注册表值 | `FlightSettingsMaxPauseDays` |
+| 注册表类型 | `REG_DWORD` |
+| 初始化要求 | 无需先生成新版的三个日期值；设置键不存在时会按需创建 |
+
+以暂停 36500 天为例，等价命令为：
+
+```cmd
+reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v FlightSettingsMaxPauseDays /t REG_DWORD /d 36500 /f
+```
+
+无论使用哪种模式，程序都只管理上述暂停更新相关值。选择“恢复正常更新”时，程序会先备份当前配置，再删除这些受管理的值。
 
 ## 使用方法
 
-### 首次使用（新版初始化，只需一次）
+### 新版日历配置
 
-如果选择新版且从未在系统设置里暂停过更新，程序会显示引导页：
+新版模式需要 Windows 先生成三个日期注册表值。如果此前没有在系统设置中暂停过更新，程序会显示首次使用引导页（一次初始化即可，如果后续恢复更新，则再重新初始化即可）：
 
 1. 打开 Windows 设置
 2. 进入 Windows 更新
@@ -43,17 +72,30 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 4. 随便选择一个日期
 5. 返回本软件点击「重新检测」
 
-引导页提供 **[打开 Windows 更新设置]** 按钮可直接跳转系统设置页，也可以直接点击 **[切换到旧版天数配置]** 使用旧版方式。
+完成初始化后：
 
-### 日常使用
+1. 在新版日历页面填写暂停结束的年、月、日、时、分。
+2. 确认时间在明天至 2099-12-31 范围内。
+3. 点击 **[应用暂停日期]**。程序会先备份当前配置，再写入新的暂停结束时间。
+4. 打开或重新打开「设置 → Windows 更新」，查看新的暂停日期。
 
-1. 双击 `WinUpdatePauser.exe`（会弹出 UAC 提示，修改 HKLM 必须管理员权限）。
-2. 程序按 Windows Build 给出新版/旧版推荐；顶部只有一个动态按钮，可切换到另一种配置方式。
-3. 使用新版时填写年/月/日/时/分（可选范围：明天 ~ 2099-12-31），点击 **[应用暂停日期]**。
-4. 使用旧版时手动填写暂停天数（1～36500），点击 **[应用旧版暂停天数]**。
-5. 完成后可打开「设置 → Windows 更新」查看效果。
+界面使用本地时间，写入注册表时会自动转换为 UTC。
 
-时间按**本地时间**选择，与 Windows 设置页显示一致；写入注册表时自动转换为 UTC。
+### 旧版天数配置
+
+旧版模式不要求先完成新版初始化，适用于 Windows 10 或仍使用旧版更新界面的 Windows 11：
+
+1. 启动 `WinUpdatePauser.exe`，并通过管理员权限提示。
+2. 如果当前显示新版页面，点击顶部的 **[切换到旧版天数配置]**。
+3. 在“旧版暂停天数”中填写 1～36500 之间的整数。
+4. 点击 **[应用旧版暂停天数]**。程序会先备份当前配置，再写入 `FlightSettingsMaxPauseDays`。
+5. 打开或重新打开「设置 → Windows 更新」，确认暂停设置。
+
+如果新版尚未初始化，也可以直接在首次使用引导页点击 **[切换到旧版天数配置]**。
+
+### 配置方式切换
+
+程序会根据 Windows Build 推荐配置方式，但不会限制用户选择。主页面顶部只有一个动态切换按钮，可随时在新版日历配置和旧版天数配置之间切换；两套输入内容不会同时显示。
 
 ### 恢复正常更新
 
@@ -70,9 +112,11 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 ### 环境要求
 
 - .NET SDK（任意 5.0 及以上版本均可构建 net48 目标）：
+
   ```
   winget install Microsoft.DotNet.SDK.10
   ```
+
   无需安装 .NET Framework 4.8 Developer Pack（项目通过 `Microsoft.NETFramework.ReferenceAssemblies` NuGet 包提供引用程序集）。
 
 ### 构建
@@ -84,11 +128,11 @@ dotnet build src\WinUpdatePauser\WinUpdatePauser.csproj -c Release
 ```
 
 产物：`src\WinUpdatePauser\bin\Release\net48\WinUpdatePauser.exe`
-（同目录的 `.exe.config` 可一并分发，也可省略；`.pdb` 仅用于调试。）
+（同目录的 `.exe.config` 可一并分发，也可省略；`.pdb` 仅用于调试。）程序本身是单个 EXE；`build.cmd` 不会自动覆盖项目根目录的旧 EXE。
 
 ### 替换引导页截图
 
-将新截图保存为 `src\WinUpdatePauser\Assets\guide.png` 后重新构建即可（截图作为资源内嵌进 exe）。
+将新截图保存为 `src\WinUpdatePauser\Assets\guide.png` 后重新构建即可（截图作为资源内嵌进 EXE）。应用图标源文件为 `src\WinUpdatePauser\Assets\app-icon.png`，多尺寸图标由 `tools\make-icon.ps1` 生成。
 
 ## 项目结构
 
