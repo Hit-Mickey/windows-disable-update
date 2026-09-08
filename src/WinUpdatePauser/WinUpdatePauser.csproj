@@ -5,8 +5,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>WinUpdatePauser</AssemblyName>
     <RootNamespace>WinUpdatePauser</RootNamespace>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <!-- 管理员权限（requireAdministrator）与高 DPI 设置在 manifest 中声明 -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 程序集信息 -->
@@ -24,6 +26,8 @@
   <ItemGroup>
     <!-- 引导页截图，编译为内嵌 WPF 资源；替换此文件后重新构建即可更新界面中的截图 -->
     <Resource Include="Assets\guide.png" />
+    <!-- 应用及窗口图标，作为 WPF 资源内嵌到单文件程序 -->
+    <Resource Include="Assets\app-icon.ico" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,30 @@
                    Margin="0,4,0,16"
                    Text="修改 Windows 更新的暂停结束日期，无需手动编辑注册表" />
 
+        <!-- 系统检测与配置方式切换：仅显示当前选中的配置面板 -->
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock x:Name="SystemVersionText"
+                           Style="{StaticResource CaptionText}"
+                           Text="正在检测系统版本…" />
+                <TextBlock x:Name="RecommendationText"
+                           Style="{StaticResource CaptionText}"
+                           Margin="0,3,0,0"
+                           Foreground="{StaticResource AccentBrush}"
+                           Text="推荐使用新版日历配置" />
+            </StackPanel>
+            <Button x:Name="ModeSwitchButton"
+                    Grid.Column="1"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="12,0,0,0"
+                    Content="切换配置方式"
+                    Click="ModeSwitch_Click" />
+        </Grid>
+
         <!-- 状态卡片 -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
@@ -25,6 +49,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0"
+                               x:Name="RegistryStateLabel"
                                Style="{StaticResource BodyText}"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Text="注册表状态：" />
@@ -36,11 +61,12 @@
 
                     <TextBlock Grid.Row="1" Grid.Column="0"
                                Margin="0,6,0,0"
+                               x:Name="CurrentStatusLabel"
                                Style="{StaticResource BodyText}"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Text="当前暂停更新时间：" />
                     <TextBlock Grid.Row="1" Grid.Column="1"
-                               x:Name="CurrentEndTimeText"
+                               x:Name="CurrentStatusValue"
                                Margin="0,6,0,0"
                                Style="{StaticResource BodyText}"
                                FontWeight="SemiBold"
@@ -50,7 +76,7 @@
         </Border>
 
         <!-- 日期设置卡片 -->
-        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+        <Border x:Name="NewCalendarPanel" Style="{StaticResource Card}" Margin="0,12,0,0">
             <StackPanel>
                 <TextBlock Style="{StaticResource SectionTitleText}" Text="选择新的暂停结束时间" />
 
@@ -108,10 +134,64 @@
             </StackPanel>
         </Border>
 
-        <!-- 底部说明 -->
+        <!-- 旧版配置面板：与新版面板互斥显示 -->
+        <Border x:Name="LegacyPanel"
+                Style="{StaticResource Card}"
+                Margin="0,12,0,0"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Style="{StaticResource SectionTitleText}" Text="旧版暂停天数" />
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <TextBox x:Name="LegacyDaysBox"
+                             Style="{StaticResource InputBox}"
+                             Width="100"
+                             MaxLength="5"
+                             TextChanged="LegacyInput_Changed"
+                             PreviewTextInput="Input_DigitsOnly" />
+                    <TextBlock Style="{StaticResource BodyText}"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               Text="天" />
+                </StackPanel>
+                <TextBlock x:Name="LegacyValidationText"
+                           Style="{StaticResource CaptionText}"
+                           Margin="0,8,0,0"
+                           Text="可填范围：1 ~ 36500 天" />
+                <Button x:Name="ApplyLegacyButton"
+                        Style="{StaticResource PrimaryButton}"
+                        Margin="0,14,0,0"
+                        HorizontalAlignment="Stretch"
+                        Content="应用旧版暂停天数"
+                        Click="ApplyLegacy_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- 底部操作 -->
+        <Grid Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="恢复正常更新"
+                    Click="Resume_Click" />
+            <Button Grid.Column="2"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="备份管理"
+                    Click="ManageBackups_Click" />
+            <Button Grid.Column="4"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="打开更新设置"
+                    Click="OpenSettings_Click" />
+        </Grid>
+
         <TextBlock Style="{StaticResource CaptionText}"
-                   Margin="0,12,0,0"
-                   Text="应用后可在「设置 → Windows 更新」中查看暂停日期。如需恢复正常更新，在系统设置中点击「继续更新」即可。" />
+                   Margin="0,10,0,0"
+                   Text="新版可在「设置 → Windows 更新」中查看暂停日期；旧版通过暂停天数控制。" />
 
     </StackPanel>
 </UserControl>

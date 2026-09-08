@@ -14,11 +14,13 @@ namespace WinUpdatePauser.Views
     {
         /// <summary>检测通过后的回调（由 MainWindow 传入，用于切换到主视图）。</summary>
         private readonly Action _onInitialized;
+        private readonly Action _onLegacyRequested;
 
-        public GuideView(Action onInitialized)
+        public GuideView(Action onInitialized, Action onLegacyRequested)
         {
             InitializeComponent();
             _onInitialized = onInitialized;
+            _onLegacyRequested = onLegacyRequested;
         }
 
         /// <summary>打开系统「Windows 更新」设置页。</summary>
@@ -49,6 +51,12 @@ namespace WinUpdatePauser.Views
                     "仍未检测到暂停设置。\n\n请确认已在「设置 → Windows 更新」中点击「暂停更新」并选择了一个日期。",
                     "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        /// <summary>新版尚未初始化时，允许用户直接切换到旧版天数配置。</summary>
+        private void UseLegacy_Click(object sender, RoutedEventArgs e)
+        {
+            _onLegacyRequested();
         }
     }
 }

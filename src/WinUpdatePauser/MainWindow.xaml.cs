@@ -10,9 +10,12 @@ namespace WinUpdatePauser
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly bool _recommendedLegacy;
+
         public MainWindow()
         {
             InitializeComponent();
+            _recommendedLegacy = !SystemVersionDetector.RecommendNewCalendar;
             RefreshView();
         }
 
@@ -22,14 +25,40 @@ namespace WinUpdatePauser
         /// </summary>
         public void RefreshView()
         {
-            if (PauseRegistryService.IsInitialized())
+            bool initialized = PauseRegistryService.IsInitialized();
+            if (initialized || _recommendedLegacy)
             {
-                RootContent.Content = new MainView();
+                ShowMainView(_recommendedLegacy);
             }
             else
             {
-                RootContent.Content = new GuideView(RefreshView);
+                RootContent.Content = new GuideView(RefreshView, ShowLegacyView);
             }
+        }
+
+        /// <summary>显示指定配置方式；新版尚未初始化时保留首次引导页。</summary>
+        private void ShowMainView(bool useLegacy)
+        {
+            if (!useLegacy && !PauseRegistryService.IsInitialized())
+            {
+                RootContent.Content = new GuideView(RefreshView, ShowLegacyView);
+                return;
+            }
+
+            RootContent.Content = new MainView(
+                useLegacy,
+                RequestModeChange,
+                RefreshView);
+        }
+
+        private void ShowLegacyView()
+        {
+            ShowMainView(true);
+        }
+
+        private void RequestModeChange(bool useLegacy)
+        {
+            ShowMainView(useLegacy);
         }
     }
 }

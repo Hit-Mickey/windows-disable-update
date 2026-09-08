@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,41 +10,52 @@ using WinUpdatePauser.Utils;
 namespace WinUpdatePauser.Views
 {
     /// <summary>
-    /// 主页：显示当前暂停结束时间，提供 年/月/日/时/分 手动输入并一键写入注册表。
-    /// 界面统一使用本地时间，写入时由 Iso8601Time 转为 UTC。
+    /// 主页面：保留原有新版年月日时分输入逻辑，并在同一页面提供互斥的旧版天数配置。
     /// </summary>
     public partial class MainView : UserControl
     {
-        /// <summary>可选下限：明天（禁止填过去时间，避免暂停立即失效）。</summary>
         private readonly DateTime _minDate = DateTime.Today.AddDays(1);
-
-        /// <summary>可选上限：2099-12-31。</summary>
         private static readonly DateTime MaxDate = new DateTime(2099, 12, 31);
-
-        /// <summary>控件初始填充完成前不做校验（避免半初始化状态误报）。</summary>
+        private readonly Action<bool> _requestModeChange;
+        private readonly Action _onStateChanged;
+        private bool _useLegacy;
+        private string _currentEndTimeDisplay;
+        private string _currentLegacyDaysDisplay;
         private bool _ready;
 
         public MainView()
+            : this(false, null, null)
         {
-            InitializeComponent();
-            LoadCurrentState();
-            _ready = true;
-            Validate();
         }
 
-        /// <summary>
-        /// 读取注册表 → 刷新状态卡片，并把当前值填入输入框作为默认值。
-        /// </summary>
+        public MainView(bool useLegacy,
+            Action<bool> requestModeChange, Action onStateChanged)
+        {
+            _useLegacy = useLegacy;
+            _requestModeChange = requestModeChange;
+            _onStateChanged = onStateChanged;
+
+            InitializeComponent();
+            LoadCurrentState();
+            SetMode(useLegacy);
+            _ready = true;
+            Validate();
+            ValidateLegacy();
+        }
+
+        /// <summary>读取注册表，刷新状态卡片与两种配置的默认输入值。</summary>
         private void LoadCurrentState()
         {
+            SystemVersionText.Text = SystemVersionDetector.DisplayVersion;
+            RecommendationText.Text = SystemVersionDetector.RecommendationText;
+
+            bool newInitialized = PauseRegistryService.IsInitialized();
+
             string raw = PauseRegistryService.ReadRawEndTime();
             DateTime? local = Iso8601Time.ParseToLocal(raw);
-
             if (local.HasValue)
             {
-                CurrentEndTimeText.Text = local.Value.ToString("yyyy-MM-dd HH:mm");
-
-                // 默认填入注册表中的当前日期（即使已过期也照实显示，应用时再校验范围）
+                _currentEndTimeDisplay = local.Value.ToString("yyyy-MM-dd HH:mm");
                 YearBox.Text = local.Value.Year.ToString("0000");
                 MonthBox.Text = local.Value.Month.ToString("00");
                 DayBox.Text = local.Value.Day.ToString("00");
@@ -52,20 +64,68 @@ namespace WinUpdatePauser.Views
             }
             else
             {
-                // 值缺失或格式异常：状态区如实提示，输入框给出最小可用默认值
-                CurrentEndTimeText.Text = raw == null ? "—" : "（格式异常：" + raw + "）";
+                _currentEndTimeDisplay = raw == null ? "—" : "（格式异常：" + raw + "）";
                 YearBox.Text = _minDate.Year.ToString("0000");
                 MonthBox.Text = _minDate.Month.ToString("00");
                 DayBox.Text = _minDate.Day.ToString("00");
                 HourBox.Text = "00";
                 MinuteBox.Text = "00";
             }
+
+            int? legacyDays = PauseRegistryService.ReadLegacyPauseDays();
+            _currentLegacyDaysDisplay = legacyDays.HasValue ? legacyDays.Value + " 天" : "尚未配置";
+            LegacyDaysBox.Text = legacyDays.HasValue ? legacyDays.Value.ToString() : "36500";
+
+            if (_useLegacy)
+            {
+                RegistryStateLabel.Text = "旧版配置状态：";
+                RegistryStateText.Text = legacyDays.HasValue ? "✓ 已配置" : "尚未配置";
+                RegistryStateText.Foreground = (Brush)FindResource(
+                    legacyDays.HasValue ? "SuccessBrush" : "TextSecondaryBrush");
+            }
+            else
+            {
+                RegistryStateLabel.Text = "注册表状态：";
+                RegistryStateText.Text = newInitialized ? "✓ 已初始化" : "未初始化（新版需先在设置中暂停一次）";
+                RegistryStateText.Foreground = (Brush)FindResource(
+                    newInitialized ? "SuccessBrush" : "TextSecondaryBrush");
+            }
+
+            UpdateStatusSummary();
         }
 
-        /// <summary>
-        /// 解析五个输入框得到本地时间。
-        /// 任一框为空/非数字/组合不是有效日期（如 2 月 30 日）时返回 null。
-        /// </summary>
+        /// <summary>只显示当前选择的配置方式，另一套内容保持折叠。</summary>
+        private void SetMode(bool useLegacy)
+        {
+            _useLegacy = useLegacy;
+            NewCalendarPanel.Visibility = useLegacy ? Visibility.Collapsed : Visibility.Visible;
+            LegacyPanel.Visibility = useLegacy ? Visibility.Visible : Visibility.Collapsed;
+
+            ModeSwitchButton.Style = (Style)FindResource("SecondaryButton");
+            ModeSwitchButton.Content = useLegacy ? "切换到新版日历配置" : "切换到旧版天数配置";
+            UpdateStatusSummary();
+
+            if (useLegacy)
+            {
+                ValidateLegacy();
+            }
+            else
+            {
+                Validate();
+            }
+        }
+
+        private void UpdateStatusSummary()
+        {
+            if (CurrentStatusLabel == null || CurrentStatusValue == null)
+            {
+                return;
+            }
+
+            CurrentStatusLabel.Text = _useLegacy ? "旧版暂停天数：" : "当前暂停更新时间：";
+            CurrentStatusValue.Text = _useLegacy ? _currentLegacyDaysDisplay : _currentEndTimeDisplay;
+        }
+
         private DateTime? GetInputLocalTime()
         {
             int year, month, day, hour, minute;
@@ -80,7 +140,6 @@ namespace WinUpdatePauser.Views
 
             try
             {
-                // DateTime 构造函数自动校验月份天数（大小月/闰年），非法组合抛异常
                 return new DateTime(year, month, day, hour, minute, 0);
             }
             catch (ArgumentOutOfRangeException)
@@ -89,7 +148,6 @@ namespace WinUpdatePauser.Views
             }
         }
 
-        /// <summary>输入框只允许输入数字。</summary>
         private void Input_DigitsOnly(object sender, TextCompositionEventArgs e)
         {
             foreach (char c in e.Text)
@@ -102,7 +160,6 @@ namespace WinUpdatePauser.Views
             }
         }
 
-        /// <summary>任一输入框内容变化时重新校验。</summary>
         private void Input_Changed(object sender, TextChangedEventArgs e)
         {
             if (_ready)
@@ -111,26 +168,26 @@ namespace WinUpdatePauser.Views
             }
         }
 
-        /// <summary>
-        /// 校验输入时间是否有效且在 明天 ~ 2099-12-31 范围内：
-        /// 不合法 → 禁用应用按钮并以红色提示原因；合法 → 恢复默认提示。
-        /// </summary>
+        private void LegacyInput_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (_ready)
+            {
+                ValidateLegacy();
+            }
+        }
+
         private void Validate()
         {
-            DateTime? input = GetInputLocalTime();
+            if (!_ready && ApplyButton == null)
+            {
+                return;
+            }
 
+            DateTime? input = GetInputLocalTime();
             if (!input.HasValue)
             {
                 ApplyButton.IsEnabled = false;
                 ShowValidation("请输入有效的日期和时间（注意月份天数）", true);
-                return;
-            }
-
-            if (input.Value.Hour > 23 || input.Value.Minute > 59)
-            {
-                // DateTime 构造已保证时分合法，此分支纯防御
-                ApplyButton.IsEnabled = false;
-                ShowValidation("时间无效（时 0-23，分 0-59）", true);
                 return;
             }
 
@@ -145,43 +202,149 @@ namespace WinUpdatePauser.Views
             ShowValidation("可填范围：明天 ~ 2099-12-31", false);
         }
 
+        private void ValidateLegacy()
+        {
+            if (LegacyDaysBox == null || ApplyLegacyButton == null)
+            {
+                return;
+            }
+
+            int days;
+            if (!int.TryParse(LegacyDaysBox.Text, out days) || days < 1 || days > 36500)
+            {
+                ApplyLegacyButton.IsEnabled = false;
+                LegacyValidationText.Text = "请输入 1 ~ 36500 之间的暂停天数";
+                LegacyValidationText.Foreground = (Brush)FindResource("ErrorBrush");
+                return;
+            }
+
+            ApplyLegacyButton.IsEnabled = true;
+            LegacyValidationText.Text = "可填范围：1 ~ 36500 天";
+            LegacyValidationText.Foreground = (Brush)FindResource("TextSecondaryBrush");
+        }
+
         private void ShowValidation(string message, bool isError)
         {
             ValidationText.Text = message;
             ValidationText.Foreground = (Brush)FindResource(isError ? "ErrorBrush" : "TextSecondaryBrush");
         }
 
-        /// <summary>
-        /// 应用按钮：本地时间 → ISO 8601 UTC → 同时写入三个注册表值 → 刷新状态。
-        /// </summary>
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
             DateTime? input = GetInputLocalTime();
             if (!input.HasValue)
             {
-                return; // 按钮禁用时不会到达，纯防御
+                return;
             }
 
             string isoUtc = Iso8601Time.ToRegistryFormat(input.Value);
-
             try
             {
-                PauseRegistryService.WriteEndTime(isoUtc);
+                BackupListItem backup = PauseRegistryService.WriteEndTime(isoUtc);
+                LoadCurrentState();
+                MessageBox.Show(
+                    "已将 Windows 更新暂停至：" + input.Value.ToString("yyyy-MM-dd HH:mm")
+                    + "\n\n备份：" + backup.DisplayName
+                    + "\n\n可打开「设置 → Windows 更新」查看效果。",
+                    "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show("写入注册表失败：\n\n" + ex.Message,
                     "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ApplyLegacy_Click(object sender, RoutedEventArgs e)
+        {
+            int days;
+            if (!int.TryParse(LegacyDaysBox.Text, out days) || days < 1 || days > 36500)
+            {
+                ValidateLegacy();
                 return;
             }
 
-            LoadCurrentState(); // 刷新状态卡片（读回写入结果）
+            try
+            {
+                BackupListItem backup = PauseRegistryService.WriteLegacyPauseDays(days);
+                LoadCurrentState();
+                MessageBox.Show(
+                    "已将旧版 Windows 更新暂停天数设置为：" + days
+                    + " 天\n\n备份：" + backup.DisplayName,
+                    "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("写入注册表失败：\n\n" + ex.Message,
+                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
-            MessageBox.Show(
-                "已将 Windows 更新暂停至：" + input.Value.ToString("yyyy-MM-dd HH:mm")
-                + "\n\n写入的注册表值：" + isoUtc
-                + "\n\n可打开「设置 → Windows 更新」查看效果。",
-                "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
+        private void Resume_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBoxResult result = MessageBox.Show(
+                "将删除本工具管理的新版和旧版暂停值，并先备份当前配置。是否继续？",
+                "恢复正常更新", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                BackupListItem backup = PauseRegistryService.ResumeNormalUpdates();
+                MessageBox.Show("已恢复正常更新。\n\n备份：" + backup.DisplayName,
+                    "操作完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (_onStateChanged != null)
+                {
+                    _onStateChanged();
+                }
+                else
+                {
+                    LoadCurrentState();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("恢复正常更新失败：\n\n" + ex.Message,
+                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ManageBackups_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new BackupWindow(LoadCurrentState)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            window.ShowDialog();
+            LoadCurrentState();
+        }
+
+        private void OpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Process.Start("ms-settings:windowsupdate");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("无法打开 Windows 设置：" + ex.Message,
+                    "Windows 更新暂停助手", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ModeSwitch_Click(object sender, RoutedEventArgs e)
+        {
+            bool targetLegacy = !_useLegacy;
+            if (_requestModeChange != null)
+            {
+                _requestModeChange(targetLegacy);
+            }
+            else
+            {
+                SetMode(targetLegacy);
+            }
         }
     }
 }

@@ -40,19 +40,28 @@
 
         <!-- 操作按钮 -->
         <Grid Margin="0,16,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="8" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0"
+            <Button Grid.Row="0" Grid.Column="0"
                     Style="{StaticResource PrimaryButton}"
                     Content="打开 Windows 更新设置"
                     Click="OpenSettings_Click" />
-            <Button Grid.Column="2"
+            <Button Grid.Row="0" Grid.Column="2"
                     Style="{StaticResource SecondaryButton}"
                     Content="重新检测"
                     Click="Recheck_Click" />
+            <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                    Style="{StaticResource SecondaryButton}"
+                    Content="切换到旧版天数配置"
+                    Click="UseLegacy_Click" />
         </Grid>
 
     </StackPanel>
