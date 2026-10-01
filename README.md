@@ -2,9 +2,10 @@
 
 一个轻量的 Windows 小工具：不用手动打开注册表，即可使用新版日历模式或旧版暂停天数模式管理 Windows 更新暂停状态。
 
-- 单文件 `WUPause.exe`，Release 产物约 **372 KB**
+- 单文件 `WUPause.exe`，Release 产物约 **386 KB**
 - **零运行时依赖**：基于 .NET Framework 4.8（Windows 10 1903+ / Windows 11 系统自带）
 - 支持 Windows 10 / Windows 11，浅色 Win11 风格界面，高 DPI 清晰显示
+- 新版日期和旧版天数使用独立守护服务，系统重置配置后自动恢复
 
 ---
 
@@ -39,6 +40,17 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 | `PauseUpdatesExpiryTime` | 暂停更新的总到期时间 |
 
 例如，写入注册表的时间格式为 `2077-01-01T00:00:00Z`。界面显示和输入使用本地时间，程序会在写入时自动转换为 UTC。
+
+### 守护服务
+
+守护服务用于处理 Windows 自动重置暂停配置的情况。程序会把同一个 `WUPause.exe` 复制到 `%ProgramFiles%\WUPause\WUPauseGuard.exe`，新版与旧版服务共用该程序文件，但分别保存目标并独立运行。
+
+| 配置方式 | 服务名称 | 目标配置 | 监听并恢复的值 |
+| --- | --- | --- | --- |
+| 新版日期 | `WUPauseDateGuard` | `HKLM\SOFTWARE\WUPause\Guard\Modern` | 三个日期 `REG_SZ` 值 |
+| 旧版天数 | `WUPauseDaysGuard` | `HKLM\SOFTWARE\WUPause\Guard\Legacy` | `FlightSettingsMaxPauseDays` |
+
+两个服务均以 LocalSystem 身份自动延迟启动，使用注册表变更通知，并辅以 60 秒检查。程序不禁用 `wuauserv`、`WaaSMedicSvc`，也不修改注册表权限。每次应用当前模式的暂停配置时，会安装或更新对应服务；“当前状态”只显示当前模式的守护状态，服务运行时才显示“卸载服务”按钮。使用“恢复正常更新”时，程序会停止两套服务，防止暂停值被重新写回。
 
 ### 旧版天数暂停
 
@@ -78,10 +90,10 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 1. 在新版日历页面填写暂停结束的年、月、日、时、分。
 2. 确认时间在明天至 2199-12-31 范围内。
-3. 点击 **[应用暂停日期]**，写入新的暂停结束时间。
+3. 点击 **[应用暂停日期]**，写入新的暂停结束时间并自动安装、启用 `WUPauseDateGuard` 日期守护服务。
 4. 打开或重新打开「设置 → Windows 更新」，查看新的暂停日期。
 
-界面使用本地时间，写入注册表时会自动转换为 UTC。
+界面使用本地时间，写入注册表时会自动转换为 UTC。服务运行状态显示在“当前状态”卡片中；如不再需要守护，可点击其中的 **[卸载服务]**。守护服务使用固定安装副本运行，因此移动或删除最初下载的 `WUPause.exe` 不会影响已经启用的守护。
 
 ### 旧版天数配置
 
@@ -90,18 +102,18 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 1. 启动 `WUPause.exe`，并通过管理员权限提示。
 2. 如果当前显示新版页面，点击顶部的 **[切换到旧版天数配置]**。
 3. 在“旧版暂停天数”中填写 1～36500 之间的整数。
-4. 点击 **[应用旧版暂停天数]**，写入 `FlightSettingsMaxPauseDays`。
+4. 点击 **[应用旧版暂停天数]**，写入 `FlightSettingsMaxPauseDays`，并自动安装、启用 `WUPauseDaysGuard` 天数守护服务。
 5. 打开或重新打开「设置 → Windows 更新」，确认暂停设置。
 
 如果新版尚未初始化，也可以直接在首次使用引导页点击 **[切换到旧版天数配置]**。
 
 ### 配置方式切换
 
-程序启动时默认进入新版日期配置，但不会限制用户选择。主页面顶部只有一个动态切换按钮，可随时在新版日历配置和旧版天数配置之间切换；两套输入内容不会同时显示。
+首次启动默认进入新版日期配置。程序会记住用户最后使用的新版或旧版界面，下次启动时直接打开对应配置；主页面顶部的动态切换按钮仍可随时切换，两套输入内容不会同时显示。
 
 ### 恢复正常更新
 
-可以在程序中点击 **[恢复正常更新]**，删除本工具管理的暂停值；也可以在系统「设置 → Windows 更新」中点击「**继续更新**」。
+可以在程序中点击 **[恢复正常更新]**，程序会先停止新版和旧版守护服务，再删除本工具管理的暂停值；也可以分别卸载两套守护服务，再在系统「设置 → Windows 更新」中点击「**继续更新**」。
 
 ## 构建方法
 
@@ -143,6 +155,9 @@ src/WinUpdatePauser/
 │   └── MainView.xaml / .cs     # 主页（新版/旧版互斥配置 + 状态与操作）
 ├── Services/
 │   ├── PauseRegistryService.cs # 注册表读写模块
+│   ├── UpdateGuardManager.cs   # 守护服务安装、配置、状态与卸载
+│   ├── UpdateGuardWindowsService.cs # 新版日期与旧版天数监听服务
+│   ├── UserPreferenceService.cs # 记住最后使用的配置界面
 │   ├── SystemVersionDetector.cs # 系统版本信息显示
 │   └── AdminHelper.cs          # 管理员权限检测 / runas 提权重启
 ├── Utils/

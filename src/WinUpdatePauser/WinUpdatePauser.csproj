@@ -18,6 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="System.ServiceProcess" />
     <!-- 引用程序集 NuGet 包：无需安装 .NET Framework 4.8 Developer Pack 即可构建 net48 -->
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>

@@ -42,10 +42,12 @@
                     <Grid.RowDefinitions>
                         <RowDefinition />
                         <RowDefinition />
+                        <RowDefinition />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0"
@@ -71,6 +73,26 @@
                                Style="{StaticResource BodyText}"
                                FontWeight="SemiBold"
                                Text="—" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0"
+                               x:Name="GuardStatusLabel"
+                               Margin="0,6,0,0"
+                               Style="{StaticResource BodyText}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Text="日期守护：" />
+                    <TextBlock Grid.Row="2" Grid.Column="1"
+                               x:Name="GuardStatusText"
+                               Margin="0,6,8,0"
+                               Style="{StaticResource BodyText}"
+                               Text="正在读取服务状态…" />
+                    <Button Grid.Row="2" Grid.Column="2"
+                            x:Name="UninstallGuardButton"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="12,4"
+                            Margin="0,4,0,0"
+                            Visibility="Collapsed"
+                            Content="卸载服务"
+                            Click="UninstallGuard_Click" />
                 </Grid>
             </StackPanel>
         </Border>

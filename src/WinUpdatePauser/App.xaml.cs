@@ -1,3 +1,5 @@
+using System;
+using System.ServiceProcess;
 using System.Windows;
 using WinUpdatePauser.Services;
 
@@ -12,6 +14,19 @@ namespace WinUpdatePauser
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            int serviceArgumentIndex = Array.FindIndex(e.Args, argument =>
+                string.Equals(argument, "--service", StringComparison.OrdinalIgnoreCase));
+            if (serviceArgumentIndex >= 0)
+            {
+                bool legacy = serviceArgumentIndex + 1 < e.Args.Length
+                              && string.Equals(e.Args[serviceArgumentIndex + 1], "legacy",
+                                  StringComparison.OrdinalIgnoreCase);
+                ServiceBase.Run(new UpdateGuardWindowsService(
+                    legacy ? GuardMode.Legacy : GuardMode.Modern));
+                Shutdown();
+                return;
+            }
 
             // 权限防御检测：正常情况下 app.manifest 的 requireAdministrator 已保证以管理员启动。
             // 若以非管理员运行（例如 manifest 被剥离或特殊启动方式），提示并提供提权重启。

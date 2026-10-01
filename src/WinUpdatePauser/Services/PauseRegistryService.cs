@@ -116,6 +116,42 @@ namespace WinUpdatePauser.Services
             }
         }
 
+        /// <summary>供日期守护服务使用：注册表值缺失或被修改时恢复目标日期。</summary>
+        internal static void EnsureEndTime(string isoUtc)
+        {
+            if (string.IsNullOrWhiteSpace(isoUtc))
+            {
+                throw new ArgumentException("暂停结束时间不能为空。", nameof(isoUtc));
+            }
+
+            using (RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey key = baseKey.CreateSubKey(SettingsKeyPath, true))
+            {
+                if (key == null)
+                {
+                    throw new InvalidOperationException("无法打开 Windows Update 注册表设置键。");
+                }
+
+                foreach (string name in NewCalendarValueNames)
+                {
+                    object current = key.GetValue(name, null,
+                        RegistryValueOptions.DoNotExpandEnvironmentNames);
+                    bool matches = string.Equals(current as string, isoUtc, StringComparison.Ordinal)
+                                   && key.GetValueKind(name) == RegistryValueKind.String;
+                    if (!matches)
+                    {
+                        key.SetValue(name, isoUtc, RegistryValueKind.String);
+                    }
+                }
+            }
+        }
+
+        /// <summary>打开设置键供服务监听；调用方负责释放。</summary>
+        internal static RegistryKey OpenSettingsKeyForMonitoring()
+        {
+            return OpenSettingsKey(false);
+        }
+
         /// <summary>写入旧版暂停天数。与 reg add 命令一致：键不存在时创建键。</summary>
         public static void WriteLegacyPauseDays(int days)
         {
@@ -133,6 +169,37 @@ namespace WinUpdatePauser.Services
                 }
 
                 key.SetValue(FlightSettingsMaxPauseDays, days, RegistryValueKind.DWord);
+            }
+        }
+
+        /// <summary>供天数守护服务使用：旧版暂停天数缺失或被修改时恢复目标值。</summary>
+        internal static void EnsureLegacyPauseDays(int days)
+        {
+            if (days < 1 || days > 36500)
+            {
+                throw new ArgumentOutOfRangeException(nameof(days), "暂停天数应为 1 到 36500。");
+            }
+
+            using (RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
+            using (RegistryKey key = baseKey.CreateSubKey(SettingsKeyPath, true))
+            {
+                if (key == null)
+                {
+                    throw new InvalidOperationException("无法打开 Windows Update 注册表设置键。");
+                }
+
+                object current = key.GetValue(FlightSettingsMaxPauseDays, null,
+                    RegistryValueOptions.DoNotExpandEnvironmentNames);
+                int currentDays;
+                bool matches = current != null
+                               && int.TryParse(Convert.ToString(current, CultureInfo.InvariantCulture),
+                                   NumberStyles.Integer, CultureInfo.InvariantCulture, out currentDays)
+                               && currentDays == days
+                               && key.GetValueKind(FlightSettingsMaxPauseDays) == RegistryValueKind.DWord;
+                if (!matches)
+                {
+                    key.SetValue(FlightSettingsMaxPauseDays, days, RegistryValueKind.DWord);
+                }
             }
         }
 

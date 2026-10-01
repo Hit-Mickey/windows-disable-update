@@ -86,6 +86,7 @@ namespace WinUpdatePauser.Views
             }
 
             UpdateStatusSummary();
+            LoadGuardState();
         }
 
         /// <summary>只显示当前选择的配置方式，另一套内容保持折叠。</summary>
@@ -94,6 +95,7 @@ namespace WinUpdatePauser.Views
             _useLegacy = useLegacy;
             NewCalendarPanel.Visibility = useLegacy ? Visibility.Collapsed : Visibility.Visible;
             LegacyPanel.Visibility = useLegacy ? Visibility.Visible : Visibility.Collapsed;
+            GuardStatusLabel.Text = useLegacy ? "天数守护：" : "日期守护：";
 
             ModeSwitchButton.Style = (Style)FindResource("SecondaryButton");
             ModeSwitchButton.Content = useLegacy ? "切换到新版日历配置" : "切换到旧版天数配置";
@@ -118,6 +120,66 @@ namespace WinUpdatePauser.Views
 
             CurrentStatusLabel.Text = _useLegacy ? "旧版暂停天数：" : "当前暂停更新时间：";
             CurrentStatusValue.Text = _useLegacy ? _currentLegacyDaysDisplay : _currentEndTimeDisplay;
+        }
+
+        private void LoadGuardState()
+        {
+            if (GuardStatusText == null) return;
+
+            try
+            {
+                GuardMode mode = _useLegacy ? GuardMode.Legacy : GuardMode.Modern;
+                GuardStatus status = UpdateGuardManager.GetStatus(mode);
+                string target;
+                if (_useLegacy)
+                {
+                    target = status.TargetDays.HasValue
+                        ? status.TargetDays.Value + " 天"
+                        : "未设置";
+                }
+                else
+                {
+                    DateTime? targetLocal = Iso8601Time.ParseToLocal(status.TargetUtc);
+                    target = targetLocal.HasValue
+                        ? targetLocal.Value.ToString("yyyy-MM-dd HH:mm")
+                        : "未设置";
+                }
+
+                if (status.Enabled && status.Running)
+                {
+                    GuardStatusText.Text = _useLegacy
+                        ? "运行中 · 守护 " + target
+                        : "运行中 · 守护至 " + target;
+                    GuardStatusText.Foreground = (Brush)FindResource("SuccessBrush");
+                }
+                else if (status.Installed)
+                {
+                    GuardStatusText.Text = status.Enabled
+                        ? "服务未运行 · 目标 " + target
+                        : "已停止 · 目标 " + target;
+                    GuardStatusText.Foreground = (Brush)FindResource("TextSecondaryBrush");
+                }
+                else if (status.Enabled)
+                {
+                    GuardStatusText.Text = "服务未安装 · 目标 " + target;
+                    GuardStatusText.Foreground = (Brush)FindResource("ErrorBrush");
+                }
+                else
+                {
+                    GuardStatusText.Text = "未运行";
+                    GuardStatusText.Foreground = (Brush)FindResource("TextSecondaryBrush");
+                }
+
+                UninstallGuardButton.Visibility = status.Running
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                UninstallGuardButton.Visibility = Visibility.Collapsed;
+                GuardStatusText.Text = "无法读取服务状态：" + ex.Message;
+                GuardStatusText.Foreground = (Brush)FindResource("ErrorBrush");
+            }
         }
 
         private DateTime? GetInputLocalTime()
@@ -235,15 +297,38 @@ namespace WinUpdatePauser.Views
             try
             {
                 PauseRegistryService.WriteEndTime(isoUtc);
+                UpdateGuardManager.InstallAndEnableModern(isoUtc);
                 LoadCurrentState();
                 MessageBox.Show(
                     "已将 Windows 更新暂停至：" + input.Value.ToString("yyyy-MM-dd HH:mm")
-                    + "\n\n可打开「设置 → Windows 更新」查看效果。",
+                    + "\n\n日期守护服务已启用，可打开「设置 → Windows 更新」查看效果。",
                     "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                ShowError("写入注册表失败：", ex);
+                ShowError("应用暂停日期失败：", ex);
+            }
+        }
+
+        private void UninstallGuard_Click(object sender, RoutedEventArgs e)
+        {
+            string guardName = _useLegacy ? "天数守护" : "日期守护";
+            MessageBoxResult result = MessageBox.Show(
+                "将停止并删除" + guardName + "服务及其配置，已设置的暂停值不会改变。是否继续？",
+                "卸载" + guardName, MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                UpdateGuardManager.Uninstall(_useLegacy ? GuardMode.Legacy : GuardMode.Modern);
+                LoadGuardState();
+                MessageBox.Show(guardName + "服务已卸载。",
+                    "操作完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError("卸载日期守护失败：", ex);
+                LoadGuardState();
             }
         }
 
@@ -259,22 +344,23 @@ namespace WinUpdatePauser.Views
             try
             {
                 PauseRegistryService.WriteLegacyPauseDays(days);
+                UpdateGuardManager.InstallAndEnableLegacy(days);
                 LoadCurrentState();
                 MessageBox.Show(
                     "已将旧版 Windows 更新暂停天数设置为：" + days
-                    + " 天",
+                    + " 天\n\n天数守护服务已启用。",
                     "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                ShowError("写入注册表失败：", ex);
+                ShowError("应用旧版暂停天数失败：", ex);
             }
         }
 
         private void Resume_Click(object sender, RoutedEventArgs e)
         {
             MessageBoxResult result = MessageBox.Show(
-                "将删除本工具管理的新版和旧版暂停值。是否继续？",
+                "将停止日期守护，并删除本工具管理的新版和旧版暂停值。是否继续？",
                 "恢复正常更新", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
             {
@@ -283,6 +369,7 @@ namespace WinUpdatePauser.Views
 
             try
             {
+                UpdateGuardManager.DisableAll();
                 PauseRegistryService.ResumeNormalUpdates();
                 MessageBox.Show("已恢复正常更新。",
                     "操作完成", MessageBoxButton.OK, MessageBoxImage.Information);
