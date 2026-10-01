@@ -234,11 +234,10 @@ namespace WinUpdatePauser.Views
             string isoUtc = Iso8601Time.ToRegistryFormat(input.Value);
             try
             {
-                BackupListItem backup = PauseRegistryService.WriteEndTime(isoUtc);
+                PauseRegistryService.WriteEndTime(isoUtc);
                 LoadCurrentState();
                 MessageBox.Show(
                     "已将 Windows 更新暂停至：" + input.Value.ToString("yyyy-MM-dd HH:mm")
-                    + "\n\n备份：" + backup.DisplayName
                     + "\n\n可打开「设置 → Windows 更新」查看效果。",
                     "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -259,11 +258,11 @@ namespace WinUpdatePauser.Views
 
             try
             {
-                BackupListItem backup = PauseRegistryService.WriteLegacyPauseDays(days);
+                PauseRegistryService.WriteLegacyPauseDays(days);
                 LoadCurrentState();
                 MessageBox.Show(
                     "已将旧版 Windows 更新暂停天数设置为：" + days
-                    + " 天\n\n备份：" + backup.DisplayName,
+                    + " 天",
                     "设置成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -275,7 +274,7 @@ namespace WinUpdatePauser.Views
         private void Resume_Click(object sender, RoutedEventArgs e)
         {
             MessageBoxResult result = MessageBox.Show(
-                "将删除本工具管理的新版和旧版暂停值，并先备份当前配置。是否继续？",
+                "将删除本工具管理的新版和旧版暂停值。是否继续？",
                 "恢复正常更新", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes)
             {
@@ -284,8 +283,8 @@ namespace WinUpdatePauser.Views
 
             try
             {
-                BackupListItem backup = PauseRegistryService.ResumeNormalUpdates();
-                MessageBox.Show("已恢复正常更新。\n\n备份：" + backup.DisplayName,
+                PauseRegistryService.ResumeNormalUpdates();
+                MessageBox.Show("已恢复正常更新。",
                     "操作完成", MessageBoxButton.OK, MessageBoxImage.Information);
                 if (_onStateChanged != null)
                 {
@@ -300,16 +299,6 @@ namespace WinUpdatePauser.Views
             {
                 ShowError("恢复正常更新失败：", ex);
             }
-        }
-
-        private void ManageBackups_Click(object sender, RoutedEventArgs e)
-        {
-            var window = new BackupWindow(LoadCurrentState)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            window.ShowDialog();
-            LoadCurrentState();
         }
 
         private void OpenSettings_Click(object sender, RoutedEventArgs e)

@@ -172,18 +172,12 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0"
                     Style="{StaticResource SecondaryButton}"
                     Content="恢复正常更新"
                     Click="Resume_Click" />
             <Button Grid.Column="2"
-                    Style="{StaticResource SecondaryButton}"
-                    Content="备份管理"
-                    Click="ManageBackups_Click" />
-            <Button Grid.Column="4"
                     Style="{StaticResource SecondaryButton}"
                     Content="打开更新设置"
                     Click="OpenSettings_Click" />

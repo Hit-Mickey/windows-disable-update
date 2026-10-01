@@ -2,7 +2,7 @@
 
 一个轻量的 Windows 小工具：不用手动打开注册表，即可使用新版日历模式或旧版暂停天数模式管理 Windows 更新暂停状态。
 
-- 单文件 `WUPause.exe`，Release 产物约 **390 KB**
+- 单文件 `WUPause.exe`，Release 产物约 **372 KB**
 - **零运行时依赖**：基于 .NET Framework 4.8（Windows 10 1903+ / Windows 11 系统自带）
 - 支持 Windows 10 / Windows 11，浅色 Win11 风格界面，高 DPI 清晰显示
 
@@ -16,7 +16,7 @@ Windows 的暂停更新配置保存在以下注册表路径中：
 HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 ```
 
-程序启动时默认进入新版日期配置；用户可根据 Windows 更新界面，通过手动切换入口选择旧版天数配置。两种模式在写入注册表前都会自动备份当前配置。
+程序启动时默认进入新版日期配置；用户可根据 Windows 更新界面，通过手动切换入口选择旧版天数配置。
 
 ### 新版日历暂停
 
@@ -58,7 +58,7 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
 reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v FlightSettingsMaxPauseDays /t REG_DWORD /d 36500 /f
 ```
 
-无论使用哪种模式，程序都只管理上述暂停更新相关值。选择“恢复正常更新”时，程序会先备份当前配置，再删除这些受管理的值。
+无论使用哪种模式，程序都只管理上述暂停更新相关值。选择“恢复正常更新”时，程序会删除这些受管理的值。
 
 ## 使用方法
 
@@ -78,7 +78,7 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 1. 在新版日历页面填写暂停结束的年、月、日、时、分。
 2. 确认时间在明天至 2199-12-31 范围内。
-3. 点击 **[应用暂停日期]**。程序会先备份当前配置，再写入新的暂停结束时间。
+3. 点击 **[应用暂停日期]**，写入新的暂停结束时间。
 4. 打开或重新打开「设置 → Windows 更新」，查看新的暂停日期。
 
 界面使用本地时间，写入注册表时会自动转换为 UTC。
@@ -90,7 +90,7 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 1. 启动 `WUPause.exe`，并通过管理员权限提示。
 2. 如果当前显示新版页面，点击顶部的 **[切换到旧版天数配置]**。
 3. 在“旧版暂停天数”中填写 1～36500 之间的整数。
-4. 点击 **[应用旧版暂停天数]**。程序会先备份当前配置，再写入 `FlightSettingsMaxPauseDays`。
+4. 点击 **[应用旧版暂停天数]**，写入 `FlightSettingsMaxPauseDays`。
 5. 打开或重新打开「设置 → Windows 更新」，确认暂停设置。
 
 如果新版尚未初始化，也可以直接在首次使用引导页点击 **[切换到旧版天数配置]**。
@@ -101,14 +101,7 @@ reg add HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings /v Fligh
 
 ### 恢复正常更新
 
-可以在程序中点击 **[恢复正常更新]**，程序会先备份当前配置，再删除本工具管理的暂停值；也可以在系统「设置 → Windows 更新」中点击「**继续更新**」。
-
-### 备份管理
-
-- 默认备份目录为程序 EXE 同级的相对目录 `backup`，可在 **[备份管理]** 中选择自定义目录或恢复默认路径。
-- 每次应用新版、应用旧版、恢复正常更新或恢复备份前，都会自动保存相关注册表值。
-- 备份管理支持恢复、重命名和删除；列表支持 Ctrl/Shift 多选、全选或取消全选，删除时一次确认即可批量删除选中的 JSON 及配套 REG 文件。
-- 恢复和重命名仅允许单选，并且所有备份操作都会限制在当前备份目录内。
+可以在程序中点击 **[恢复正常更新]**，删除本工具管理的暂停值；也可以在系统「设置 → Windows 更新」中点击「**继续更新**」。
 
 ## 构建方法
 
@@ -147,10 +140,9 @@ src/WinUpdatePauser/
 ├── MainWindow.xaml / .cs       # 单窗口，按初始化状态切换引导页 / 主页
 ├── Views/
 │   ├── GuideView.xaml / .cs    # 引导页（注册表未初始化时显示）
-│   ├── MainView.xaml / .cs     # 主页（新版/旧版互斥配置 + 状态与操作）
-│   └── BackupWindow.xaml / .cs # 备份列表、恢复、重命名、删除与路径设置
+│   └── MainView.xaml / .cs     # 主页（新版/旧版互斥配置 + 状态与操作）
 ├── Services/
-│   ├── PauseRegistryService.cs # 注册表操作与备份模块
+│   ├── PauseRegistryService.cs # 注册表读写模块
 │   ├── SystemVersionDetector.cs # 系统版本信息显示
 │   └── AdminHelper.cs          # 管理员权限检测 / runas 提权重启
 ├── Utils/
@@ -189,15 +181,6 @@ A：本工具利用的是 Windows 现有的暂停机制，微软未来可能调�
 
 - **新版日历配置**：沿用现有的年、月、日、时、分手动输入，并将同一 ISO 8601 UTC 时间写入 `PauseFeatureUpdatesEndTime`、`PauseQualityUpdatesEndTime`、`PauseUpdatesExpiryTime` 三个 `REG_SZ` 值。首次使用新版前仍需先在 Windows 设置中手动暂停一次，让系统生成这些值。
 - **旧版天数配置**：手动填写 1～36500 天，写入 `HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\FlightSettingsMaxPauseDays`（`REG_DWORD`），等价于旧版系统使用的 `reg add` 配置方式。未完成新版初始化时，也可以从引导页切换到旧版。
-
-## 注册表备份与恢复
-
-每次写入新版、写入旧版、恢复正常更新或恢复某个备份前，程序都会先保存相关注册表键和值。备份记录值是否存在、原始类型和原始数据，并同时生成可阅读的 JSON 与 `.reg` 文件。
-
-- 默认目录是程序 EXE 同级的相对目录 `backup`；在「备份管理」中可以选择自定义目录或恢复默认路径。
-- 文件名采用「操作前的配置_时间」格式，例如 `应用新版配置前的配置_20260908-120000-123.json`。
-- 「备份管理」支持恢复、重命名和删除。列表可使用 Ctrl/Shift 多选或全选，批量删除时只进行一次确认；恢复和重命名仅允许单选。服务端会校验目标必须位于当前备份目录内。恢复操作本身也会先生成一份“恢复备份前的配置”。
-- 「恢复正常更新」会先备份，再删除本工具管理的新版三个值和旧版天数值。若需恢复以前的状态，可在备份管理中选择对应 JSON 备份。
 
 ## 感谢
 
